@@ -206,14 +206,8 @@ void QuadDynamics::Dynamics(float dt, float simTime, V3F external_force, V3F ext
 
   // Prop dynamics, props cannot change thrusts in a non continuous manner
   for (int m = 0; m < 4; m++){
-    if (motorCmdsN(m) >= motorCmdsOld(m))
-    {
-      motorCmdsN(m) = motorCmdsN(m) * ((float)dt/((float)dt + (float)tauaUp)) + motorCmdsOld(m) * ((float)tauaUp/((float)dt + (float)tauaUp));
-    }
-    else 
-    {
-      motorCmdsN(m) = motorCmdsN(m) * ((float)dt/((float)dt + (float)tauaDown)) + motorCmdsOld(m) * ((float)tauaDown/((float)dt + (float)tauaDown));
-    }
+    const float taua = (motorCmdsN(m) >= motorCmdsOld(m)) ? tauaUp : tauaDown;
+    motorCmdsN(m) = (motorCmdsN(m) * dt + motorCmdsOld(m) * taua) / (dt + taua);
   }
 
   float total_thrust = motorCmdsN(0) + motorCmdsN(1) + motorCmdsN(2) + motorCmdsN(3);

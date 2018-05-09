@@ -82,7 +82,7 @@ protected:
   float L; // distance from body z axis to the prop
 
   // properties of the prop/motor system as modeled
-  double tauaUp, tauaDown; // time constant
+  float tauaUp, tauaDown; // time constant
   float kappa; // Nm drag per N lift
   float minMotorThrust, maxMotorThrust;
 
