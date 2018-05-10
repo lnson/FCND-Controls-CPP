@@ -4,7 +4,7 @@
 # X=Y sets X to Y. Y may be a string, float, or list of 3 floats
 ############################################################################
 
-[QuadControlParams] 
+[QuadControlParams]
 
 UseIdealEstimator=1
 
@@ -28,11 +28,21 @@ kpVelXY = 4
 kpVelZ = 4
 
 # Angle control gains
-kpBank = 5
-kpYaw = 1
+#kpBank = 50
+kpBank = 20
+#kpYaw = 1
 
 # Angle rate gains
-kpPQR = 23, 23, 5
+#kpPQR = 23, 23, 5
+#kpPQR = 250,50,0.01
+#kpPQR = 250,125,0.1
+#kpPQR = 500,270,0.01
+#kpPQR = 500,271,0.01
+#kpPQR = 480,230,0.01
+#kpPQR = 477,221,0.01
+#kpPQR = 46,46,10
+#kpPQR = 1000,0,0
+kpPQR = 42.55,5,5
 
 # limits
 maxAscentRate = 5

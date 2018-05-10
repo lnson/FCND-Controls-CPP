@@ -6,10 +6,10 @@
 # Y may be a string, float, or comma-separated list of several numbers
 ############################################################################
 
-[Sim] 
+[Sim]
 
 # 5ms simulation steps
-Timestep = 0.001 
+Timestep = 0.001
 
 # Record vehicle state to this file
 # comment out to disable
@@ -30,6 +30,6 @@ xyzDisturbanceInt = 0.00001
 rotDisturbanceBW = 2
 xyzDisturbanceBW = 2
 
-[Quad] 
+[Quad]
 randomMotorForceMag = .25
 trajectoryLogStepTime = .05
