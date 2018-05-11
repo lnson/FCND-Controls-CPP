@@ -33,7 +33,6 @@ public:
 private:
   float ArmLengthX() const;
   float ArmLengthY() const;
-  float MaxTorque() const;
   
   // -------------- PARAMETERS --------------
   
