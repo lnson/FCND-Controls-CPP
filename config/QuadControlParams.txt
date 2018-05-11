@@ -19,35 +19,23 @@ minMotorThrust = .1
 maxMotorThrust = 4.5
 
 # Lateral control
-kpPosXY = 5
-kpVelXY = 2
-kpPosXY = 3.24
-kpVelXY = 1.7
-kpPosXY = 4
-kpVelXY = 2.4
+kpPosXY = 15
+kpVelXY = 7
 
 # Vertical control
-kpPosZ = 0.5
-kpVelZ = 1
+kpPosZ = 80
+kpVelZ = 80
 KiPosZ = 20
 
 # Angle control gains
-#kpBank = 50
 kpBank = 9
-kpYaw = 3
+kpBank = 13
 kpYaw = 2
 
 # Angle rate gains
-#kpPQR = 23, 23, 5
-#kpPQR = 250,50,0.01
-#kpPQR = 250,125,0.1
-#kpPQR = 500,270,0.01
-#kpPQR = 500,271,0.01
-#kpPQR = 480,230,0.01
-#kpPQR = 477,221,0.01
-#kpPQR = 46,46,10
-#kpPQR = 1000,0,0
-kpPQR = 30,4,4
+kpPQR = 80,80,20
+kpPQR = 30,100,50
+kpPQR = 100,80,20
 
 # limits
 maxAscentRate = 5
