@@ -14,9 +14,13 @@
 
 namespace {
   template<class T>
-  constexpr const T& clamp( const T& v, const T& lo, const T& hi )
+  constexpr const T& clamp(const T& v, const T& lo, const T& hi)
   {
     return v < lo ? lo : hi < v ? hi : v;
+  }
+  
+  float norm(float x, float y) {
+    return sqrt(x * x + y * y);
   }
 }
 
@@ -32,7 +36,7 @@ void QuadControl::Init()
   ParamsHandle config = SimpleConfig::GetInstance();
   
   // Load parameters (default to 0)
-  kpPosXY = config->Get(_config+".kpPosXY", 0);
+  kpPosXY = config->Get(_config + ".kpPosXY", 0);
   kpPosZ = config->Get(_config + ".kpPosZ", 0);
   KiPosZ = config->Get(_config + ".KiPosZ", 0);
   
@@ -118,23 +122,23 @@ V3F QuadControl::BodyRateControl(V3F desired_pqr, V3F current_pqr)
   output.z = error.z * kpPQR.z * Izz;
   
   float scale = 1.0f;
- {
-   const float max_moment_x = 2.0f * maxMotorThrust * ArmLengthX();
-   const float abs_moment_x = fabs(output.x);
-   if (abs_moment_x > max_moment_x) scale = std::min(max_moment_x / abs_moment_x, scale);
- }
+  {
+    const float max_moment_x = 2.0f * maxMotorThrust * ArmLengthX();
+    const float abs_moment_x = fabs(output.x);
+    if (abs_moment_x > max_moment_x) scale = std::min(max_moment_x / abs_moment_x, scale);
+  }
    
- {
-   const float max_moment_y = 2.0f * maxMotorThrust * ArmLengthY();
-   const float abs_moment_y = fabs(output.y);
-   if (abs_moment_y > max_moment_y) scale = std::min(max_moment_y / abs_moment_y, scale);
- }
+  {
+    const float max_moment_y = 2.0f * maxMotorThrust * ArmLengthY();
+    const float abs_moment_y = fabs(output.y);
+    if (abs_moment_y > max_moment_y) scale = std::min(max_moment_y / abs_moment_y, scale);
+  }
    
- {
-   const float max_moment_z = 2.0f * maxMotorThrust * kappa;
-   const float abs_moment_z = fabs(output.z);
-   if (abs_moment_z > max_moment_z) scale = std::min(max_moment_z / abs_moment_z, scale);
- }
+  {
+    const float max_moment_z = 2.0f * maxMotorThrust * kappa;
+    const float abs_moment_z = fabs(output.z);
+    if (abs_moment_z > max_moment_z) scale = std::min(max_moment_z / abs_moment_z, scale);
+  }
   
   return output * scale;
 }
@@ -219,17 +223,20 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   //return 0;
   Mat3x3F R = attitude.RotationMatrix_IwrtB();
   
+  velZCmd = clamp(velZCmd, -maxAscentRate, maxDescentRate);
   const float positionError = posZCmd - posZ;
   const float velocityError = velZCmd - velZ;
   integratedAltitudeError += positionError * dt;
   
   const float output = positionError * kpPosZ +
-      velocityError * kpVelZ + accelZCmd +
-      integratedAltitudeError * KiPosZ;
+      velocityError * kpVelZ +
+      integratedAltitudeError * KiPosZ +
+      accelZCmd;
   
   const float min_collective_thrust = 4.0f * minMotorThrust;
   const float max_collective_thrust = 4.0f * maxMotorThrust;
-  return clamp((output + CONST_GRAVITY) / R(2, 2) * mass, min_collective_thrust, max_collective_thrust);
+  const float output_thrust = (-output + CONST_GRAVITY) / R(2, 2) * mass;
+  return clamp(output_thrust, min_collective_thrust, max_collective_thrust);
 }
 
 // returns a desired acceleration in global frame
@@ -251,23 +258,34 @@ V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel
   //  - make sure you limit the maximum horizontal velocity and acceleration
   //    to maxSpeedXY and maxAccelXY
   
-  // make sure we don't have any incoming z-component
-  accelCmdFF.z = 0;
-  velCmd.z = 0;
-  posCmd.z = pos.z;
+  const float error_pos_x = posCmd.x - pos.x;
+  const float error_pos_y = posCmd.y - pos.y;
   
-  // we initialize the returned desired acceleration to the feed-forward value.
-  // Make sure to _add_, not simply replace, the result of your controller
-  // to this variable
-  V3F accelCmd = accelCmdFF;
+  {
+    const float vel_xy = norm(velCmd.x, velCmd.y);
+    if (vel_xy > maxSpeedXY) {
+      const float scale = maxSpeedXY / vel_xy;
+      velCmd.x *= scale;
+      velCmd.y *= scale;
+    }
+  }
   
-  ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
+  const float error_vel_x = velCmd.x - vel.x;
+  const float error_vel_y = velCmd.y - vel.y;
   
+  float accel_x = kpPosXY * error_pos_x + kpVelXY * error_vel_x + accelCmdFF.x;
+  float accel_y = kpPosXY * error_pos_y + kpVelXY * error_vel_y + accelCmdFF.y;
   
+  {
+    const float accel_xy = norm(accel_x, accel_y);
+    if (accel_xy > maxAccelXY) {
+      const float scale = maxAccelXY / accel_xy;
+      accel_x *= scale;
+      accel_y *= scale;
+    }
+  }
   
-  /////////////////////////////// END STUDENT CODE ////////////////////////////
-  
-  return accelCmd;
+  return V3F(accel_x, accel_y, 0.0f);
 }
 
 // returns desired yaw rate
@@ -284,7 +302,12 @@ float QuadControl::YawControl(float desired_yaw, float current_yaw)
   //  - use the yaw control gain parameter kpYaw
   
   float error = desired_yaw - current_yaw;
-  float result = error * kpYaw;
+  if (error > F_PI) {
+    error -= 2.0f * F_PI;
+  } else if (error < -F_PI) {
+    error += 2.0f * F_PI;
+  }
+  const float result = error * kpYaw;
   return result;
 }
 
