@@ -235,7 +235,7 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   
   const float min_collective_thrust = 4.0f * minMotorThrust;
   const float max_collective_thrust = 4.0f * maxMotorThrust;
-  const float output_thrust = (-output + CONST_GRAVITY) / R(2, 2) * mass;
+  const float output_thrust = (CONST_GRAVITY - output) / R(2, 2) * mass;
   return clamp(output_thrust, min_collective_thrust, max_collective_thrust);
 }
 
