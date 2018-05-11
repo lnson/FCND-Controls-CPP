@@ -29,7 +29,7 @@ kpVelZ = 4
 
 # Angle control gains
 #kpBank = 50
-kpBank = 17
+kpBank = 9
 #kpYaw = 1
 
 # Angle rate gains

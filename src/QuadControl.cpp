@@ -13,8 +13,10 @@
 #endif
 
 namespace {
-  float norm(float x, float y, float z) {
-    return sqrt(x * x + y * y + z * z);
+  template<class T>
+  constexpr const T& clamp( const T& v, const T& lo, const T& hi )
+  {
+    return v < lo ? lo : hi < v ? hi : v;
   }
 }
 
@@ -88,7 +90,7 @@ VehicleCommand QuadControl::GenerateMotorCommands(float desired_total_thrust, V3
   cmd.desiredThrustsN[3] = -(f_total + f_x + f_y + f_z) / 4.0f;
   
   for (int i = 0; i < 4; ++i) {
-    cmd.desiredThrustsN[i] = CONSTRAIN(cmd.desiredThrustsN[i], minMotorThrust, maxMotorThrust);
+    cmd.desiredThrustsN[i] = clamp(cmd.desiredThrustsN[i], minMotorThrust, maxMotorThrust);
   }
   
   return cmd;
@@ -176,15 +178,20 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
     accelCmd *= absCollAccel / xyAccel;
   }
   
-  V3F bTarget = accelCmd / collectiveAccel;
-  V3F bActual(R(0, 2), R(1, 2), 0.0f);
+  const float target_roll = clamp(accelCmd.x / collectiveAccel, -maxTiltAngle, maxTiltAngle);
+  const float target_pitch = clamp(accelCmd.y / collectiveAccel, -maxTiltAngle, maxTiltAngle);
+
+  const float current_roll = R(0, 2);
+  const float current_pitch = R(1, 2);
   
-  V3F bDot = (bTarget - bActual) * kpBank;
+  const float roll_error = target_roll - current_roll;
+  const float pitch_error = target_pitch - current_pitch;
   
-  // p = [r_{1,0}, -r_{0,0}] * bDot / r_{2,2}
-  float p = bDot.dot(V3F(R(1,0), -R(0, 0), 0.0f)) / R(2, 2);
-  // q = [r_{1,1}, -r_{0,1}] * bDot / r_{2,2}
-  float q = bDot.dot(V3F(R(1,1), -R(0, 1), 0.0f)) / R(2, 2);
+  const float roll_dot = roll_error * kpBank;
+  const float pitch_dot = pitch_error * kpBank;
+
+  const float p = (roll_dot * R(1,0) - pitch_dot * R(0, 0)) / R(2, 2);
+  const float q = (roll_dot * R(1,1) - pitch_dot * R(0, 1)) / R(2, 2);
   
   return V3F(p, q, /*r=*/0.0f);
 }
@@ -212,14 +219,17 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   //return 0;
   Mat3x3F R = attitude.RotationMatrix_IwrtB();
   
-  float positionError = posZCmd - posZ;
-  float velocityError = velZCmd - velZ;
+  const float positionError = posZCmd - posZ;
+  const float velocityError = velZCmd - velZ;
   integratedAltitudeError += positionError * dt;
   
-  float output = positionError * kpPosZ + velocityError * kpVelZ + accelZCmd +
-  integratedAltitudeError * KiPosZ;
+  const float output = positionError * kpPosZ +
+      velocityError * kpVelZ + accelZCmd +
+      integratedAltitudeError * KiPosZ;
   
-  return (output + CONST_GRAVITY) / R(2, 2) * mass;
+  const float min_collective_thrust = 4.0f * minMotorThrust;
+  const float max_collective_thrust = 4.0f * maxMotorThrust;
+  return clamp((output + CONST_GRAVITY) / R(2, 2) * mass, min_collective_thrust, max_collective_thrust);
 }
 
 // returns a desired acceleration in global frame
@@ -285,8 +295,10 @@ VehicleCommand QuadControl::RunControl(float dt, float simTime)
   float collThrustCmd = AltitudeControl(curTrajPoint.position.z, curTrajPoint.velocity.z, estPos.z, estVel.z, estAtt, curTrajPoint.accel.z, dt);
   
   // reserve some thrust margin for angle control
-  float thrustMargin = (maxMotorThrust - minMotorThrust) / 10.0f;
-  collThrustCmd = CONSTRAIN(collThrustCmd, (minMotorThrust+ thrustMargin)*4.f, (maxMotorThrust-thrustMargin)*4.f);
+  const float thrustMargin = (maxMotorThrust - minMotorThrust) / 10.0f;
+  const float min_collective_thrust = (minMotorThrust + thrustMargin) * 4.0f;
+  const float max_collective_thrust = (maxMotorThrust - thrustMargin) * 4.0f;
+  collThrustCmd = clamp(collThrustCmd, min_collective_thrust, max_collective_thrust);
   
   V3F desAcc = LateralPositionControl(curTrajPoint.position, curTrajPoint.velocity, estPos, estVel, curTrajPoint.accel);
   
@@ -297,4 +309,3 @@ VehicleCommand QuadControl::RunControl(float dt, float simTime)
   
   return GenerateMotorCommands(collThrustCmd, desMoment);
 }
-
