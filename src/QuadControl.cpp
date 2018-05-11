@@ -115,38 +115,26 @@ V3F QuadControl::BodyRateControl(V3F desired_pqr, V3F current_pqr)
   output.y = error.y * kpPQR.y * Iyy;
   output.z = error.z * kpPQR.z * Izz;
   
-  /*float scale = 1.0f;
-   {
+  float scale = 1.0f;
+ {
    const float max_moment_x = 2.0f * maxMotorThrust * ArmLengthX();
    const float abs_moment_x = fabs(output.x);
    if (abs_moment_x > max_moment_x) scale = std::min(max_moment_x / abs_moment_x, scale);
-   }
+ }
    
-   {
+ {
    const float max_moment_y = 2.0f * maxMotorThrust * ArmLengthY();
    const float abs_moment_y = fabs(output.y);
    if (abs_moment_y > max_moment_y) scale = std::min(max_moment_y / abs_moment_y, scale);
-   }
+ }
    
-   {
+ {
    const float max_moment_z = 2.0f * maxMotorThrust * kappa;
    const float abs_moment_z = fabs(output.z);
    if (abs_moment_z > max_moment_z) scale = std::min(max_moment_z / abs_moment_z, scale);
-   }*/
-  
-  const float abs_torque = fabs(norm(output.x, output.y, output.z));
-  const float max_torque = MaxTorque();
-  const float scale = (abs_torque <= max_torque) ? 0 : (max_torque / abs_torque);
+ }
   
   return output * scale;
-}
-
-float QuadControl::MaxTorque() const {
-  const float thrust_range = maxMotorThrust - minMotorThrust;
-  const float tx = 2.0f * thrust_range * ArmLengthX();
-  const float ty = 2.0f * thrust_range * ArmLengthY();
-  const float tz = 2.0f * thrust_range * kappa;
-  return norm(tx, ty, tz);
 }
 
 float QuadControl::ArmLengthX() const {
