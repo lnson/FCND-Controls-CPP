@@ -28,7 +28,6 @@ kpVelZ = 80
 KiPosZ = 20
 
 # Angle control gains
-kpBank = 9
 kpBank = 13
 kpYaw = 2
 
